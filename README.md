@@ -1,5 +1,7 @@
 # Wind Forecast Desk
 
+[![CI](https://github.com/divyanshus2404/ws7qhz/actions/workflows/ci.yml/badge.svg)](https://github.com/divyanshus2404/ws7qhz/actions/workflows/ci.yml)
+
 A web app for a UK utility's day-ahead power buying desk. It answers two questions for every delivery day in January 2026:
 
 1. **What did the latest wind forecast say when we had to decide?** That means the forecast available before the day-ahead auction closed at 11:00 UK time the day before, not one published later.
