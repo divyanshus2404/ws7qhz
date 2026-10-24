@@ -1,37 +1,46 @@
 :root {
   color-scheme: light;
-  --bg: #f4f4f1;
-  --surface: #fcfcfb;
-  --border: #e3e2dd;
-  --text: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #8a8984;
-  --grid: #ecebe7;
-  --axis: #b9b8b2;
-  --hover: rgba(0, 0, 0, 0.04);
-  --accent-bg: #eaf2fc;
-  --series-1: #2a78d6;
-  --series-2: #eb6834;
-  --series-3: #1baf7a;
+  --bg: #ffffeb;
+  --surface: #fffff5;
+  --border: #e4e4d0;
+  --text: #1a1a1a;
+  --text-secondary: #4d4d45;
+  --text-muted: #8a897f;
+  --grid: #ececd8;
+  --axis: #b8b7a6;
+  --hover: rgba(3, 79, 70, 0.06);
+  --accent-bg: #f0d7ff;
+  --accent-ink: #1a1a1a;
+  --ink-panel: #1a1a1a;
+  --ink-panel-text: #ffffeb;
+  --banner: #034f46;
+  --series-1: #034f46;
+  --series-2: #ff6c4c;
+  --series-3: #ffa946;
   --error: #c0392b;
+  --serif: "EB Garamond", Georgia, serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #121211;
-    --surface: #1a1a19;
-    --border: #2c2c2a;
-    --text: #f0efec;
-    --text-secondary: #c3c2b7;
-    --text-muted: #8f8e88;
-    --grid: #262624;
-    --axis: #55544f;
-    --hover: rgba(255, 255, 255, 0.05);
-    --accent-bg: #172638;
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --series-3: #199e70;
-    --error: #e66767;
+    --bg: #141412;
+    --surface: #1d1d1a;
+    --border: #2e2e29;
+    --text: #ffffeb;
+    --text-secondary: #cfcfbd;
+    --text-muted: #8f8e82;
+    --grid: #282824;
+    --axis: #55544c;
+    --hover: rgba(255, 255, 235, 0.05);
+    --accent-bg: #3b2d47;
+    --accent-ink: #f0d7ff;
+    --ink-panel: #034f46;
+    --ink-panel-text: #ffffeb;
+    --banner: #034f46;
+    --series-1: #4fb8a3;
+    --series-2: #ff7d60;
+    --series-3: #ffa946;
+    --error: #ff8a75;
   }
 }
 
@@ -40,7 +49,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 14px/1.45 Inter, system-ui, -apple-system, sans-serif;
+  font: 14.5px/1.5 Figtree, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 button, input, select { font: inherit; color: inherit; }
@@ -135,3 +144,38 @@ select, input[type="date"] {
   .app { padding: 0 16px 24px; }
   .chart.tall { height: 320px; }
 }
+
+/* ---- Editorial theme (inspired by warm, serif-led marketing sites) ---- */
+.banner {
+  background: var(--banner); color: #ffffeb; text-align: center; font-size: 13px; font-weight: 500;
+  padding: 9px 16px;
+}
+.banner a { color: #f0d7ff; text-decoration: none; margin-left: 8px; }
+.topbar { border-bottom: 0; margin-bottom: 0; }
+.brand-name { font-family: var(--serif); font-weight: 500; font-size: 22px; letter-spacing: 0; }
+.hero { text-align: center; padding: 28px 0 26px; }
+.eyebrow { text-transform: uppercase; letter-spacing: 0.14em; font-size: 11.5px; color: var(--text-secondary); font-weight: 600; }
+.hero h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(36px, 5.4vw, 60px); line-height: 1.02; margin: 10px 0 12px; letter-spacing: -0.01em; }
+.hero h1 em { font-style: italic; }
+.hero p { margin: 0 auto; max-width: 560px; color: var(--text-secondary); font-size: 16px; }
+.controls { display: flex; justify-content: center; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin: 0 0 24px; }
+.tabs { background: transparent; border: 0; gap: 8px; padding: 0; }
+.tabs button { border: 1px solid var(--border); background: var(--surface); padding: 9px 18px; border-radius: 8px; font-weight: 600; color: var(--text); }
+.tabs button[aria-selected="true"] { background: var(--accent-bg); color: var(--accent-ink); border-color: transparent; }
+.card { border-radius: 20px; padding: 20px 22px; }
+.card h2 { font-family: var(--serif); font-weight: 500; font-size: 22px; letter-spacing: 0; }
+.kpi { border-radius: 16px; }
+.kpi.accent { background: var(--accent-bg); }
+.kpi.accent .kpi-value { color: var(--accent-ink); }
+.kpi-value { font-family: var(--serif); font-weight: 500; font-size: 27px; letter-spacing: 0; line-height: 1.15; }
+.insights {
+  background: var(--ink-panel); color: var(--ink-panel-text); border: 0; border-radius: 32px; padding: 28px 32px;
+}
+.insights h3 { font-family: var(--serif); font-weight: 400; font-size: 30px; margin-bottom: 10px; }
+.insights li { color: rgba(255, 255, 235, 0.78); margin: 8px 0; }
+.insights b { color: #ffffeb; }
+.insights li::marker { color: #ffa946; }
+.lede { text-align: center; margin: 0 auto 18px; font-size: 15px; }
+select, input[type="date"], .day-picker button { border-radius: 8px; }
+.foot { text-align: center; border-top: 0; padding-top: 24px; }
+.slider input { accent-color: var(--series-1); }
