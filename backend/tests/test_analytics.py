@@ -1,4 +1,4 @@
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 
 import pytest
 
@@ -6,7 +6,7 @@ from app import analytics, config
 from app.models import ActualPoint, ForecastPoint, Pair
 from app.store import WindDataStore
 
-UTC = timezone.utc
+UTC = UTC
 
 
 def dt(s: str) -> datetime:
@@ -114,3 +114,24 @@ def test_horizon_view_respects_minimum_lead_time():
     assert four_h["series"][0]["forecast"] == 1000
     two_h = analytics.horizon_view(store, target, target + timedelta(minutes=30), 2)
     assert two_h["series"][0]["forecast"] == 2000
+
+
+def test_procurement_buys_the_gap_between_demand_and_wind():
+    target = date(2026, 1, 20)
+    days = [target - timedelta(days=k) for k in range(0, config.CALIBRATION_DAYS + 3)]
+    store = _flat_store(days, 1000, lambda d: 900)  # wind always 100 MW below forecast
+
+    p = analytics.day_ahead_view(store, target, time(11), demand_mw=5000)["procurement"]
+    assert p["raw_mwh"] == 24 * 4000
+    assert p["p50_mwh"] == pytest.approx(24 * 4100)  # calibrated wind is 900
+    assert p["hindsight_mwh"] == pytest.approx(24 * 4100)
+    assert p["raw_shortfall_mwh"] == pytest.approx(24 * 100)
+    assert p["p10_mwh"] >= p["p50_mwh"]
+
+
+def test_procurement_never_negative_when_wind_exceeds_demand():
+    target = date(2026, 1, 20)
+    days = [target - timedelta(days=k) for k in range(0, config.CALIBRATION_DAYS + 3)]
+    store = _flat_store(days, 1000, lambda d: 1000)
+    p = analytics.day_ahead_view(store, target, time(11), demand_mw=500)["procurement"]
+    assert p["raw_mwh"] == 0 and p["hindsight_mwh"] == 0

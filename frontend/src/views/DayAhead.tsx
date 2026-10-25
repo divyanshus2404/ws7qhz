@@ -9,8 +9,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { api, type DayAhead, type Meta } from "../api";
-import { Card, Kpi, Legend, Status, TipBox } from "../components/ui";
+import { api, type DayAhead, type Meta, type Procurement } from "../api";
+import { Card, DownloadButton, Kpi, Legend, Status, TipBox } from "../components/ui";
+import { downloadCsv } from "../csv";
 import { GW_TICKS, axisGw, gw, gwh, mw, pct, signedGw, ukDateTime, ukDay, ukTime } from "../format";
 import { useApi } from "../useApi";
 import { COLORS } from "../theme";
@@ -25,7 +26,11 @@ export default function DayAheadView({ meta, cutoff }: { meta: Meta; cutoff: str
   const [first, last] = meta.delivery_range;
   const [day, setDay] = useState("2026-01-15");
   const [showVintages, setShowVintages] = useState(false);
-  const { data, error, loading } = useApi(() => api.dayAhead(day, cutoff), [day, cutoff]);
+  // Flat demand to cover, in GW. Default is roughly GB winter demand, as an illustration.
+  const [demandGw, setDemandGw] = useState("35");
+  const demand = Number(demandGw);
+  const demandMw = demandGw !== "" && Number.isFinite(demand) && demand >= 0 && demand <= 100 ? demand * 1000 : undefined;
+  const { data, error, loading } = useApi(() => api.dayAhead(day, cutoff, demandMw), [day, cutoff, demandMw]);
 
   return (
     <>
@@ -39,6 +44,17 @@ export default function DayAheadView({ meta, cutoff }: { meta: Meta; cutoff: str
             ›
           </button>
         </div>
+        <label className="demand">
+          Demand to cover (GW, flat)
+          <input
+            type="number"
+            min={0}
+            max={100}
+            step={0.5}
+            value={demandGw}
+            onChange={(e) => setDemandGw(e.target.value)}
+          />
+        </label>
         <span className="toolbar-note">
           Delivery day <b>{ukDay(day)}</b> · bought in the auction on <b>{ukDay(shiftDate(day, -1))}</b>
         </span>
@@ -125,10 +141,27 @@ function DayAheadBody({
           </>
         }
         actions={
-          <label className="toggle">
-            <input type="checkbox" checked={showVintages} onChange={(e) => setShowVintages(e.target.checked)} />
-            Show how the forecast evolved ({data.vintages.length} publications)
-          </label>
+          <div className="card-actions">
+            <label className="toggle">
+              <input type="checkbox" checked={showVintages} onChange={(e) => setShowVintages(e.target.checked)} />
+              Show how the forecast evolved ({data.vintages.length} publications)
+            </label>
+            <DownloadButton
+              onClick={() =>
+                downloadCsv(
+                  `wind-day-ahead-${data.delivery_date}.csv`,
+                  data.series.map((r) => ({
+                    time_utc: r.time,
+                    raw_forecast_mw: r.forecast,
+                    p10_mw: r.p10,
+                    p50_mw: r.p50,
+                    p90_mw: r.p90,
+                    actual_mw: r.actual,
+                  })),
+                )
+              }
+            />
+          </div>
         }
       >
         <Legend
@@ -171,6 +204,8 @@ function DayAheadBody({
         </div>
       </Card>
 
+      {data.procurement && <BuyPlan p={data.procurement} date={data.delivery_date} />}
+
       {data.metrics && (
         <Card title="How did the decision forecast do on this day?" subtitle="Hourly points, error = actual − forecast">
           <div className="kpis compact">
@@ -195,4 +230,89 @@ function DayTip({ active, payload, label }: { active?: boolean; payload?: { payl
     r.actual != null && { label: "Actual", value: mw(r.actual), color: COLORS.actual },
   ].filter(Boolean) as { label: string; value: string; color?: string }[];
   return <TipBox title={ukDateTime(label)} rows={rows} />;
+}
+
+function BuyPlan({ p, date }: { p: Procurement; date: string }) {
+  const cover = p.p10_mwh != null && p.p50_mwh != null ? p.p10_mwh - p.p50_mwh : null;
+  const rows = p.hourly.map((h) => ({ ...h, cover: h.p10 != null && h.p50 != null ? [h.p50, h.p10] : null }));
+  return (
+    <Card
+      title="How much to buy beyond wind"
+      subtitle={
+        <>
+          Flat demand of {gw(p.demand_mw)} minus wind, for each hour of the day. Enter your own portfolio demand above;
+          the default is roughly GB winter demand, for illustration.
+        </>
+      }
+      actions={
+        <DownloadButton
+          onClick={() =>
+            downloadCsv(
+              `buy-plan-${date}.csv`,
+              p.hourly.map((h) => ({
+                time_utc: h.time,
+                demand_mw: p.demand_mw,
+                buy_vs_raw_forecast_mw: h.raw,
+                buy_vs_p50_wind_mw: h.p50,
+                buy_vs_p10_wind_mw: h.p10,
+              })),
+            )
+          }
+        />
+      }
+    >
+      <div className="kpis compact">
+        <Kpi label="Expected need (vs P50 wind)" value={gwh(p.p50_mwh)} tone="accent" />
+        <Kpi label="Cautious need (vs P10 wind)" value={gwh(p.p10_mwh)} sub={cover != null ? `${gwh(cover)} extra buys 9-in-10 cover` : undefined} />
+        <Kpi label="Using the raw forecast" value={gwh(p.raw_mwh)} />
+        <Kpi
+          label="Actually needed (hindsight)"
+          value={gwh(p.hindsight_mwh)}
+          tone="muted"
+          sub={
+            p.raw_shortfall_mwh != null
+              ? p.raw_shortfall_mwh > 0
+                ? `Raw forecast would have left you ${gwh(p.raw_shortfall_mwh)} short`
+                : `Raw forecast would have over-bought by ${gwh(-p.raw_shortfall_mwh)}`
+              : "Not settled yet"
+          }
+        />
+      </div>
+      <Legend
+        items={[
+          { label: "Buy vs P50 wind", color: COLORS.forecast },
+          { label: "Extra for P10 cover", color: COLORS.forecast, kind: "band" },
+          { label: "Buy vs raw forecast", color: COLORS.forecast, kind: "dash" },
+        ]}
+      />
+      <div className="chart">
+        <ResponsiveContainer>
+          <ComposedChart data={rows} margin={{ top: 8, right: 12, bottom: 0, left: 4 }}>
+            <CartesianGrid stroke="var(--grid)" vertical={false} />
+            <XAxis dataKey="time" tickFormatter={ukTime} interval={2} tick={{ fontSize: 12 }} stroke="var(--axis)" />
+            <YAxis tickFormatter={axisGw} tick={{ fontSize: 12 }} stroke="var(--axis)" width={56} unit=" GW" />
+            <Tooltip
+              content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null;
+                const h = payload[0].payload as Procurement["hourly"][number];
+                return (
+                  <TipBox
+                    title={ukDateTime(String(label))}
+                    rows={[
+                      { label: "Buy vs P50 wind", value: mw(h.p50), color: COLORS.forecast },
+                      { label: "Buy vs P10 wind", value: mw(h.p10) },
+                      { label: "Buy vs raw forecast", value: mw(h.raw) },
+                    ]}
+                  />
+                );
+              }}
+            />
+            <Area dataKey="cover" stroke="none" fill={COLORS.forecast} fillOpacity={0.14} isAnimationActive={false} />
+            <Line dataKey="raw" stroke={COLORS.forecast} strokeWidth={2} strokeDasharray="5 4" dot={false} isAnimationActive={false} />
+            <Line dataKey="p50" stroke={COLORS.forecast} strokeWidth={2.5} dot={false} isAnimationActive={false} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
+  );
 }

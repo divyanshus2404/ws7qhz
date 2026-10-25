@@ -179,3 +179,14 @@ select, input[type="date"] {
 select, input[type="date"], .day-picker button { border-radius: 8px; }
 .foot { text-align: center; border-top: 0; padding-top: 24px; }
 .slider input { accent-color: var(--series-1); }
+
+.card-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.btn-ghost {
+  border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 6px 12px;
+  font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.btn-ghost:hover { background: var(--accent-bg); border-color: transparent; color: var(--accent-ink); }
+.demand input {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
+  min-height: 34px; width: 140px;
+}

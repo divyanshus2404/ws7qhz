@@ -23,19 +23,24 @@ def test_day_ahead_uses_forecast_published_before_gate_closure():
     assert body["forecast_published"] <= body["decision_cutoff"]
     assert len(body["series"]) == 48
     assert body["calibration"] is not None
+    assert body["procurement"] is None
+
+
+def test_day_ahead_with_demand_returns_buy_volumes():
+    body = client.get("/api/day-ahead", params={"delivery_date": "2026-01-15", "demand_mw": 35000}).json()
+    p = body["procurement"]
+    assert p["hours"] == 24
+    assert p["p10_mwh"] >= p["p50_mwh"]
+    assert len(p["hourly"]) == 24
 
 
 def test_day_ahead_rejects_out_of_scope_dates_and_bad_cutoffs():
     assert client.get("/api/day-ahead", params={"delivery_date": "2025-06-01"}).status_code == 422
-    assert (
-        client.get("/api/day-ahead", params={"delivery_date": "2026-01-15", "cutoff": "25:00"}).status_code == 422
-    )
+    assert client.get("/api/day-ahead", params={"delivery_date": "2026-01-15", "cutoff": "25:00"}).status_code == 422
 
 
 def test_forecast_explorer():
-    body = client.get(
-        "/api/forecast", params={"start": "2026-01-10", "end": "2026-01-11", "horizon_hours": 12}
-    ).json()
+    body = client.get("/api/forecast", params={"start": "2026-01-10", "end": "2026-01-11", "horizon_hours": 12}).json()
     assert len(body["series"]) == 96
     assert body["metrics"]["n"] > 0
 

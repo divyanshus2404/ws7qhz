@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 
 from . import config
 from .models import UK, Pair, iso
@@ -58,12 +58,12 @@ def error_metrics(pairs: list[Pair]) -> dict | None:
 
 
 def uk_midnight(d: date) -> datetime:
-    return datetime.combine(d, time(0), tzinfo=UK).astimezone(timezone.utc)
+    return datetime.combine(d, time(0), tzinfo=UK).astimezone(UTC)
 
 
 def decision_cutoff(delivery: date, cutoff: time = config.DEFAULT_DECISION_CUTOFF) -> datetime:
     """UTC instant of the day-ahead decision for `delivery` (cutoff UK time on D-1)."""
-    return datetime.combine(delivery - timedelta(days=1), cutoff, tzinfo=UK).astimezone(timezone.utc)
+    return datetime.combine(delivery - timedelta(days=1), cutoff, tzinfo=UK).astimezone(UTC)
 
 
 def delivery_slots(delivery: date, step_minutes: int) -> list[datetime]:
@@ -124,7 +124,7 @@ def apply_calibration(forecast: float, cal: dict) -> dict:
     }
 
 
-def day_ahead_view(store: WindDataStore, delivery: date, cutoff: time) -> dict:
+def day_ahead_view(store: WindDataStore, delivery: date, cutoff: time, demand_mw: float | None = None) -> dict:
     as_of = decision_cutoff(delivery, cutoff)
     publication = store.latest_publication(as_of)
     cal = calibration(store, delivery, cutoff)
@@ -170,6 +170,44 @@ def day_ahead_view(store: WindDataStore, delivery: date, cutoff: time) -> dict:
         "metrics": error_metrics(pairs),
         "calibrated_metrics": error_metrics(_calibrated(pairs, cal)) if cal else None,
         "vintages": _vintages(store, delivery),
+        "procurement": procurement(store, hourly, ranged, demand_mw) if demand_mw is not None else None,
+    }
+
+
+def procurement(
+    store: WindDataStore, hourly: dict[datetime, float], ranged: dict[datetime, dict], demand_mw: float
+) -> dict:
+    """Volume to buy beyond wind for a flat demand, at each confidence level.
+
+    Buying against P50 wind is the expected need; buying against P10 wind covers the
+    shortfall in 9 days out of 10. The gap between them is the price of that cover.
+    "Hindsight" uses actual wind at the same hourly timestamps."""
+
+    def need(wind: float) -> float:
+        return max(demand_mw - wind, 0.0)
+
+    hours = sorted(hourly)
+    raw = sum(need(hourly[t]) for t in hours)
+    actuals = [store.actual(t) for t in hours]
+    hindsight = sum(need(a) for a in actuals) if hours and all(a is not None for a in actuals) else None
+    return {
+        "demand_mw": demand_mw,
+        "hours": len(hours),
+        "raw_mwh": raw,
+        "p50_mwh": sum(need(ranged[t]["p50"]) for t in hours) if ranged else None,
+        "p10_mwh": sum(need(ranged[t]["p10"]) for t in hours) if ranged else None,
+        "hindsight_mwh": hindsight,
+        # Positive = buying against the raw forecast would have left the desk short.
+        "raw_shortfall_mwh": hindsight - raw if hindsight is not None else None,
+        "hourly": [
+            {
+                "time": iso(t),
+                "raw": need(hourly[t]),
+                "p50": need(ranged[t]["p50"]) if ranged else None,
+                "p10": need(ranged[t]["p10"]) if ranged else None,
+            }
+            for t in hours
+        ],
     }
 
 
@@ -291,8 +329,7 @@ def horizon_profile(store: WindDataStore) -> list[dict]:
         if start <= p.start_time < end and p.horizon_hours < config.MAX_HORIZON_HOURS:
             buckets[int(p.horizon_hours // width)].append(p)
     return [
-        {"horizon_from": b * width, "horizon_to": (b + 1) * width, **error_metrics(buckets[b])}
-        for b in sorted(buckets)
+        {"horizon_from": b * width, "horizon_to": (b + 1) * width, **error_metrics(buckets[b])} for b in sorted(buckets)
     ]
 
 

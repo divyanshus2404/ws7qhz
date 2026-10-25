@@ -11,7 +11,7 @@ import csv
 import os
 from bisect import bisect_right
 from collections import defaultdict
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
 
@@ -111,8 +111,8 @@ def load_live(first_delivery: date, last_delivery: date) -> WindDataStore:
     every day has its full set of vintages; actuals cover every delivery day."""
     from . import elexon  # imported lazily so tests/snapshot mode never touch the network
 
-    publish_from = datetime.combine(first_delivery - timedelta(days=4), datetime.min.time()).replace(tzinfo=timezone.utc)
-    publish_to = datetime.combine(last_delivery + timedelta(days=1), datetime.min.time()).replace(tzinfo=timezone.utc)
+    publish_from = datetime.combine(first_delivery - timedelta(days=4), datetime.min.time()).replace(tzinfo=UTC)
+    publish_to = datetime.combine(last_delivery + timedelta(days=1), datetime.min.time()).replace(tzinfo=UTC)
     forecasts = elexon.fetch_wind_forecasts(publish_from, publish_to)
     actuals = elexon.fetch_wind_actuals(first_delivery - timedelta(days=1), last_delivery + timedelta(days=1))
     return WindDataStore(forecasts, actuals)

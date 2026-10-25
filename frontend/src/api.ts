@@ -40,6 +40,17 @@ export interface DayAheadRow {
   p90: number | null;
 }
 
+export interface Procurement {
+  demand_mw: number;
+  hours: number;
+  raw_mwh: number;
+  p50_mwh: number | null;
+  p10_mwh: number | null;
+  hindsight_mwh: number | null;
+  raw_shortfall_mwh: number | null;
+  hourly: { time: string; raw: number; p50: number | null; p10: number | null }[];
+}
+
 export interface DayAhead {
   delivery_date: string;
   decision_cutoff: string;
@@ -59,6 +70,7 @@ export interface DayAhead {
   metrics: Metrics | null;
   calibrated_metrics: Metrics | null;
   vintages: { publish_time: string; points: { time: string; forecast: number }[] }[];
+  procurement: Procurement | null;
 }
 
 export interface Explorer {
@@ -101,7 +113,8 @@ async function get<T>(path: string, params: Record<string, string | number> = {}
 
 export const api = {
   meta: () => get<Meta>("meta"),
-  dayAhead: (delivery_date: string, cutoff: string) => get<DayAhead>("day-ahead", { delivery_date, cutoff }),
+  dayAhead: (delivery_date: string, cutoff: string, demand_mw?: number) =>
+    get<DayAhead>("day-ahead", { delivery_date, cutoff, ...(demand_mw != null ? { demand_mw } : {}) }),
   explorer: (start: string, end: string, horizon_hours: number) =>
     get<Explorer>("forecast", { start, end, horizon_hours }),
   accuracy: (cutoff: string) => get<Accuracy>("accuracy", { cutoff }),

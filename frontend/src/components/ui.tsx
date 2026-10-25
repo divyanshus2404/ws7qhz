@@ -76,3 +76,11 @@ export function TipBox({ title, rows }: { title: string; rows: { label: string; 
     </div>
   );
 }
+
+export function DownloadButton({ onClick, label = "Download CSV" }: { onClick: () => void; label?: string }) {
+  return (
+    <button className="btn-ghost" onClick={onClick}>
+      ↓ {label}
+    </button>
+  );
+}

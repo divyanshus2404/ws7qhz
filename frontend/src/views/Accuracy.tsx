@@ -15,7 +15,8 @@ import {
   YAxis,
 } from "recharts";
 import { api, type Accuracy } from "../api";
-import { Card, Kpi, Legend, Status, TipBox } from "../components/ui";
+import { Card, DownloadButton, Kpi, Legend, Status, TipBox } from "../components/ui";
+import { downloadCsv } from "../csv";
 import { axisGw, gw, mw, pct, signedGw, ukDay } from "../format";
 import { COLORS } from "../theme";
 import { useApi } from "../useApi";
@@ -123,7 +124,26 @@ function AccuracyBody({ data }: { data: Accuracy }) {
           </div>
         </Card>
 
-        <Card title="Daily error: raw vs calibrated" subtitle="Mean absolute error of the decision forecast per delivery day">
+        <Card
+          title="Daily error: raw vs calibrated"
+          subtitle="Mean absolute error of the decision forecast per delivery day"
+          actions={
+            <DownloadButton
+              label="CSV"
+              onClick={() =>
+                downloadCsv(
+                  `daily-accuracy-cutoff-${data.decision_cutoff_uk.replace(":", "")}.csv`,
+                  data.daily.map((d) => ({
+                    delivery_date: d.date,
+                    raw_mae_mw: d.mae,
+                    calibrated_mae_mw: d.calibrated_mae,
+                    raw_bias_mw: d.bias,
+                  })),
+                )
+              }
+            />
+          }
+        >
           <Legend items={[{ label: "Raw forecast", color: COLORS.vintage }, { label: "Calibrated P50", color: COLORS.forecast }]} />
           <div className="chart">
             <ResponsiveContainer>

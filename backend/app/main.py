@@ -36,9 +36,7 @@ def _parse_cutoff(value: str) -> time:
 
 def _check_delivery(d: date) -> None:
     if not (config.FIRST_DELIVERY <= d <= config.LAST_DELIVERY):
-        raise HTTPException(
-            422, f"delivery_date must be between {config.FIRST_DELIVERY} and {config.LAST_DELIVERY}"
-        )
+        raise HTTPException(422, f"delivery_date must be between {config.FIRST_DELIVERY} and {config.LAST_DELIVERY}")
 
 
 @app.get("/api/health")
@@ -61,14 +59,18 @@ def meta() -> dict:
 
 
 @app.get("/api/day-ahead")
-def day_ahead(delivery_date: date, cutoff: str = CutoffParam) -> dict:
+def day_ahead(
+    delivery_date: date,
+    cutoff: str = CutoffParam,
+    demand_mw: float | None = Query(None, ge=0, le=100_000, description="Flat demand to cover, MW"),
+) -> dict:
     _check_delivery(delivery_date)
-    return _day_ahead_cached(delivery_date, cutoff)
+    return _day_ahead_cached(delivery_date, cutoff, demand_mw)
 
 
 @lru_cache(maxsize=256)
-def _day_ahead_cached(delivery_date: date, cutoff: str) -> dict:
-    return analytics.day_ahead_view(get_store(), delivery_date, _parse_cutoff(cutoff))
+def _day_ahead_cached(delivery_date: date, cutoff: str, demand_mw: float | None) -> dict:
+    return analytics.day_ahead_view(get_store(), delivery_date, _parse_cutoff(cutoff), demand_mw)
 
 
 @app.get("/api/forecast")
@@ -110,4 +112,3 @@ if STATIC_DIR.is_dir():
         if path and candidate.is_relative_to(STATIC_DIR.resolve()) and candidate.is_file():
             return FileResponse(candidate)
         return FileResponse(STATIC_DIR / "index.html")
-

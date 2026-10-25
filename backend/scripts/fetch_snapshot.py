@@ -16,8 +16,10 @@ def main() -> None:
     forecasts = [f for p in store.publish_times for f in store.publication(p)]
     actuals = [ActualPoint(t, g) for t, g in sorted(store.actuals.items())]
     save_snapshot(forecasts, actuals)
-    print(f"Saved {len(forecasts)} forecast points from {len(store.publish_times)} publications "
-          f"and {len(actuals)} actuals to {DATA_DIR}")
+    print(
+        f"Saved {len(forecasts)} forecast points from {len(store.publish_times)} publications "
+        f"and {len(actuals)} actuals to {DATA_DIR}"
+    )
 
 
 if __name__ == "__main__":
