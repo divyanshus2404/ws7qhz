@@ -11,6 +11,19 @@ A web app for a UK utility's day-ahead power buying desk. It answers two questio
 
 Data is national GB wind only, from Elexon BMRS: [FUELHH](https://bmrs.elexon.co.uk/api-documentation/endpoint/datasets/FUELHH/stream) (actual outturn, `fuelType = WIND`, half-hourly) and [WINDFOR](https://bmrs.elexon.co.uk/api-documentation/endpoint/datasets/WINDFOR/stream) (forecast, hourly, published about 8 times a day).
 
+![Day-ahead desk](docs/screenshots/desk.png)
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/accuracy.png" alt="Forecast accuracy" /></td>
+    <td><img src="docs/screenshots/explorer.png" alt="Horizon explorer" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Forecast accuracy</b></td>
+    <td align="center"><b>Horizon explorer</b></td>
+  </tr>
+</table>
+
 ---
 
 ## What the app shows
@@ -21,7 +34,7 @@ Data is national GB wind only, from Elexon BMRS: [FUELHH](https://bmrs.elexon.co
 | **Forecast accuracy** | Every hour of every January delivery day is scored against the forecast the desk really had. Shows MAE, bias, WAPE, P50/P90/P99 absolute error, and P10–P90 coverage. Charts show error against lead time, daily error (raw vs calibrated), the error distribution, forecast vs actual, and error by hour of day. A plain-English panel explains what this means for buying. |
 | **Horizon explorer** | Choose a date range and a minimum lead time (0–48 h). For each hour the chart uses the latest forecast published at least that long before delivery. Drag the slider to watch accuracy get worse with lead time. |
 
-The decision time can be changed (07:00 – 16:00 on D-1). Every view is recalculated so the desk can see what an earlier or later decision would have cost in accuracy.
+Each tab can be linked directly: `#desk`, `#accuracy`, `#explorer`. The decision time can be changed (07:00 – 16:00 on D-1). Every view is recalculated so the desk can see what an earlier or later decision would have cost in accuracy.
 
 ## Key findings (January 2026, 11:00 D-1 decisions, 744 delivery hours)
 
@@ -91,6 +104,7 @@ The decision time can be changed (07:00 – 16:00 on D-1). Every view is recalcu
 │   │   ├── format.ts, theme.ts, useApi.ts, styles.css
 │   └── vite.config.ts         Dev proxy /api → :8000
 ├── Dockerfile                 Multi-stage: build UI → single FastAPI image serving UI + API
+├── docs/screenshots/          README images
 ├── docker-compose.yml
 ├── vercel.json                Static UI + Python function for /api
 ├── requirements.txt           Python deps for the Vercel function

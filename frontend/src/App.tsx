@@ -36,7 +36,15 @@ const HERO: Record<Tab, { eyebrow: string; title: string; italic: string; body: 
 const CUTOFFS = ["07:00", "09:00", "10:00", "11:00", "12:00", "16:00"];
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>("desk");
+  // The URL hash (#desk, #accuracy, #explorer) selects the tab, so views can be linked directly.
+  const [tab, setTabState] = useState<Tab>(() => {
+    const hash = window.location.hash.slice(1);
+    return TABS.some((t) => t.id === hash) ? (hash as Tab) : "desk";
+  });
+  const setTab = (t: Tab) => {
+    setTabState(t);
+    window.history.replaceState(null, "", `#${t}`);
+  };
   const [cutoff, setCutoff] = useState("11:00");
   const meta = useApi(api.meta, []);
 
